@@ -3,13 +3,21 @@ services:
         image: qdrant/qdrant:latest
         ports:
             - "6333:6333"
+        volumes:
+            - qdrant_storage:/qdrant/storage
+        networks:
+            - rag_network
 
     ollama:
         image: ollama/ollama:latest
         ports:
             - "11434:11434"
+        volumes:
+            - ollama_storage:/root/.ollama
         environment:
             - OLLAMA_NUM_PARALLEL=1
+        networks:
+            - rag_network
 
     backend:
         build: ./backend
@@ -23,6 +31,8 @@ services:
         depends_on:
             - qdrant
             - ollama
+        networks:
+            - rag_network
 
     frontend:
         build: ./frontend
@@ -30,3 +40,13 @@ services:
             - "8501:8501"
         depends_on:
             - backend
+        networks:
+            - rag_network
+
+volumes:
+    qdrant_storage:
+    ollama_storage:
+
+networks:
+    rag_network:
+        driver: bridge
