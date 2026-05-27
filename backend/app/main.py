@@ -35,35 +35,41 @@ async def upload_document(session_id: str, file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
-    contents = await file.read()
-    chunk_count = ingest_document(contents, session_id, qdrant_client)
-    return UploadResponse(
-        message=f"Successfully ingested {file.filename}",
-        chunk_count=chunk_count,
-        session_id=session_id
-    )
+    try:
+        contents = await file.read()
+        chunk_count = ingest_document(contents, session_id, qdrant_client)
+        return UploadResponse(
+            message=f"Successfully ingested {file.filename}",
+            chunk_count=chunk_count,
+            session_id=session_id
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
 
 @app.post("/ask", response_model=QuestionResponse)
 async def ask_question(request: QuestionRequest):
     """Ask a question about uploaded documents"""
-    # Search for relevant chunks
-    relevant_chunks = search_similar_chunks(
-        request.question,
-        request.session_id,
-        qdrant_client
-    )
-
-    if not relevant_chunks:
-        return QuestionResponse(
-            answer="No documents found for this session. Please upload a PDF first.",
-            sources=[]
+    try:
+        # Search for relevant chunks
+        relevant_chunks = search_similar_chunks(
+            request.question,
+            request.session_id,
+            qdrant_client
         )
 
-    # Generate answer
-    answer = generate_answer(request.question, relevant_chunks)
+        if not relevant_chunks:
+            return QuestionResponse(
+                answer="No documents found for this session. Please upload a PDF first.",
+                sources=[]
+            )
 
-    # Extract source texts
-    sources = [chunk[0][:200] + "..." for chunk in relevant_chunks]
+        # Generate answer
+        answer = generate_answer(request.question, relevant_chunks)
 
-    return QuestionResponse(answer=answer, sources=sources)
+        # Extract source texts
+        sources = [chunk[0][:200] + "..." for chunk in relevant_chunks]
+
+        return QuestionResponse(answer=answer, sources=sources)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating answer: {str(e)}")
