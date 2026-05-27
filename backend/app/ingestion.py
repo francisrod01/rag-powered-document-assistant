@@ -1,3 +1,4 @@
+import ollama
 from pypdf import PdfReader
 from typing import List
 
@@ -27,3 +28,8 @@ def chunk_text(text: str) -> List[str]:
         start += CHUNK_SIZE - CHUNK_OVERLAP
 
     return chunks
+
+def get_embedding(text: str) -> List[float]:
+    """Generate embedding using Ollama"""
+    response = ollama.embeddings(model="qwen2:1.5b", prompt=text)
+    return response["embedding"]
