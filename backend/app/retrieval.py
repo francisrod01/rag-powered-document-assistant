@@ -1,3 +1,4 @@
+import ollama
 from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from typing import List, Tuple
@@ -25,3 +26,23 @@ def search_similar_chunks(question: str, session_id: str, qdrant_client: QdrantC
         chunks.append((point.payload["text"], point.score))
 
     return chunks
+
+
+def generate_answer(question: str, context_chunks: List[Tuple[str, float]]) -> str:
+    """Generate answer using Ollama with retrieved context"""
+    # Build prompt with context
+    context = "\n\n---\n\n".join([chunk[0] for chunk in context_chunks])
+
+    prompt = f"""Ÿou are a helpful assistant answering questions based only on the provided context.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer concisely based only on the context above. If the context doesn't contain the answer,
+say "I cannot find this information in the document."
+"""
+
+    response = ollama.generate(model="qwen2:1.5b", prompt=prompt)
+    return response["response"].strip()
