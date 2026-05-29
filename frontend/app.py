@@ -44,3 +44,32 @@ for message in st.session_state.messages:
             with st.expander("View sources"):
                 for i, source in enumerate(message["sources"]):
                     st.text(f"Source {i+1}: {source}")
+
+# Chat input
+if prompt := st.chat_input("Ask a question about your document"):
+    # Display user message
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Get response from API
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = requests.post(
+                f"{API_URL}/ask",
+                json={
+                    "question": prompt,
+                    "session_id": st.session_state.session_id
+                }
+            )
+            if response.status_code == 200:
+                data = response.json()
+                answer = data["answer"]
+                st.markdown(answer)
+
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer,
+                })
+            else:
+                st.error(f"Error: {response.json()['detail']}")
