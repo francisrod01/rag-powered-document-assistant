@@ -65,11 +65,17 @@ if prompt := st.chat_input("Ask a question about your document"):
             if response.status_code == 200:
                 data = response.json()
                 answer = data["answer"]
+                sources = data["sources"]
                 st.markdown(answer)
+                if sources:
+                    with st.expander("Sources"):
+                        for i, source in enumerate(sources):
+                            st.text(f"Source {i+1}: {source}")
 
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": answer,
+                    "sources": sources
                 })
             else:
                 st.error(f"Error: {response.json()['detail']}")
