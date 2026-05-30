@@ -1,5 +1,4 @@
 from io import BytesIO
-import ollama
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, Distance, VectorParams
 from pypdf import PdfReader
@@ -8,9 +7,11 @@ from typing import List
 import os
 
 # constants
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 1500
+CHUNK_OVERLAP = 100
 COLLECTION_NAME = "documents"
+EMBEDDING_MODEL = "nomic-embed-text"  # fast CPU embedding model
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -42,10 +43,15 @@ def chunk_text(text: str) -> List[str]:
     return chunks
 
 
-def get_embedding(text: str) -> List[float]:
-    """Generate embedding using Ollama"""
-    response = ollama.embeddings(model="qwen2:1.5b", prompt=text)
-    return response["embedding"]
+def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
+    """Get embeddings for a list of texts in a single API call"""
+    import requests
+    response = requests.post(
+        f"{OLLAMA_HOST}/api/embed",
+        json={"model": EMBEDDING_MODEL, "input": texts}
+    )
+    response.raise_for_status()
+    return response.json()["embeddings"]
 
 
 def ingest_document(file_bytes: bytes, session_id: str, qdrant_client: QdrantClient):
@@ -60,11 +66,11 @@ def ingest_document(file_bytes: bytes, session_id: str, qdrant_client: QdrantCli
     if not chunks:
         raise ValueError("No text chunks were created (document may be empty).")
 
-    # Get embedding dimension by test
-    test_embedding = get_embedding("test")
-    embedding_dim = len(test_embedding)
+    # Get embeddings dimension using a test text
+    dummy_embedding = get_embeddings_batch(["test"])[0]
+    embedding_dim = len(dummy_embedding)
 
-    # Create collection if doesn't exist
+    # Create collection if it doesn't exist
     collections = qdrant_client.get_collections().collections
     if not any(c.name == COLLECTION_NAME for c in collections):
         qdrant_client.create_collection(
@@ -72,10 +78,12 @@ def ingest_document(file_bytes: bytes, session_id: str, qdrant_client: QdrantCli
             vectors_config=VectorParams(size=embedding_dim, distance=Distance.COSINE)
         )
 
+    # Batch generate embeddings for all chunks
+    embeddings = get_embeddings_batch(chunks)
+
     # Generate embeddings and store points
     points = []
-    for idx, chunk in enumerate(chunks):
-        embedding = get_embedding(chunk)
+    for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
         point_id = str(uuid.uuid4())
         points.append(
             PointStruct(

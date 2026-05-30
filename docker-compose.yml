@@ -7,6 +7,11 @@ services:
             - qdrant_storage:/qdrant/storage
         networks:
             - rag_network
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
 
     ollama:
         image: ollama/ollama:latest
