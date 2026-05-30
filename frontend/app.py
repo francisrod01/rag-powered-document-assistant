@@ -22,15 +22,20 @@ with st.sidebar:
     if uploaded_file and st.button("Process Document"):
         with st.spinner("Processing..."):
             files = {"file": uploaded_file}
-            response = requests.post(
-                f"{API_URL}/upload/{st.session_state.session_id}",
-                files=files
-            )
-            if response.status_code == 200:
-                st.success(f"{response.json()['message']}")
-                st.info(f"Chunks created: {response.json()['chunk_count']}")
-            else:
-                st.error(f"Error: {response.json()['detail']}")
+            try:
+                response = requests.post(
+                    f"{API_URL}/upload/{st.session_state.session_id}",
+                    files=files,
+                    timeout=120
+                )
+                if response.status_code == 200:
+                    st.success(f"{response.json()['message']}")
+                    st.info(f"Chunks created: {response.json()['chunk_count']}")
+                else:
+                    detail = response.json().get("detail", "Unknown backend error")
+                    st.error(f"Error: {detail}")
+            except requests.exceptions.RequestException as exc:
+                st.error(f"Cannot connect to backend at {API_URL}. Error: {exc}")
 
     st.divider()
     st.caption(f"Session ID: {st.session_state.session_id[:8]}...")
@@ -55,27 +60,32 @@ if prompt := st.chat_input("Ask a question about your document"):
     # Get response from API
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = requests.post(
-                f"{API_URL}/ask",
-                json={
-                    "question": prompt,
-                    "session_id": st.session_state.session_id
-                }
-            )
-            if response.status_code == 200:
-                data = response.json()
-                answer = data["answer"]
-                sources = data["sources"]
-                st.markdown(answer)
-                if sources:
-                    with st.expander("Sources"):
-                        for i, source in enumerate(sources):
-                            st.text(f"Source {i+1}: {source}")
+            try:
+                response = requests.post(
+                    f"{API_URL}/ask",
+                    json={
+                        "question": prompt,
+                        "session_id": st.session_state.session_id
+                    },
+                    timeout=120
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    answer = data["answer"]
+                    sources = data["sources"]
+                    st.markdown(answer)
+                    if sources:
+                        with st.expander("Sources"):
+                            for i, source in enumerate(sources):
+                                st.text(f"Source {i+1}: {source}")
 
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer,
-                    "sources": sources
-                })
-            else:
-                st.error(f"Error: {response.json()['detail']}")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": answer,
+                        "sources": sources
+                    })
+                else:
+                    detail = response.json().get("detail", "Unknown backend error")
+                    st.error(f"Error: {detail}")
+            except requests.exceptions.RequestException as exc:
+                st.error(f"Cannot connect to backend at {API_URL}. Error: {exc}")

@@ -1,7 +1,7 @@
 .PHONY: up pull-model down clean
 
 up:
-	docker-compose up -d
+	docker-compose up -d --build
 
 pull-model:
 	@echo "Pulling nomic-embed-text into ollama container..."
