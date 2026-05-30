@@ -32,8 +32,8 @@ async def health_check():
 @app.post("/upload/{session_id}", response_model=UploadResponse)
 async def upload_document(session_id: str, file: UploadFile = File(...)):
     """Upload and ingest a PDF document"""
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    if not file.filename or not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="File must be a PDF with a valid filename")
 
     try:
         contents = await file.read()
