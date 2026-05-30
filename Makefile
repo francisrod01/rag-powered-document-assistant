@@ -7,9 +7,11 @@ pull-model:
 	@echo "Pulling qwen2:1.5b into ollama container..."
 	docker exec -it rag-powered-document-assistant-ollama-1 ollama pull qwen2:1.5b
 
-test: curl http://localhost:8000/health
+test:
+	curl http://localhost:8000/health
 
-logs: docker-compose logs -f
+logs:
+	docker-compose logs -f
 
 down:
 	docker-compose down
