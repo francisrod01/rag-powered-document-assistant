@@ -59,8 +59,11 @@ async def ask_question(request: QuestionRequest):
         # Generate answer
         answer = generate_answer(request.question, relevant_chunks)
 
-        # Extract source texts
-        sources = [chunk[0][:200] + "..." for chunk in relevant_chunks]
+        import re
+
+        # Extract source texts and clean up formatting
+        # Replaces all consecutive whitespaces/newlines with a single space
+        sources = [re.sub(r'\s+', ' ', chunk[0]).strip()[:200] + "..." for chunk in relevant_chunks]
 
         return QuestionResponse(answer=answer, sources=sources)
     except Exception as e:
