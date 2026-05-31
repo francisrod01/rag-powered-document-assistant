@@ -6,6 +6,14 @@ For example, upload a technical report and get answers instantly, with citations
 Author: [Francis Batista](https://github.com/francisrod01)
 
 
+## 🏗 Architecture
+
+This assistant uses a Retrieval-Augmented Generation (RAG) architecture:
+1. **Frontend**: Streamlit provides a simple UI to upload PDFs and ask questions.
+2. **Backend**: A FastAPI server coordinates ingestion and retrieval.
+3. **Storage**: Qdrant Vector Database stores document embeddings.
+4. **LLM Engine**: Ollama runs models locally (`nomic-embed-text` for embeddings, `qwen2:1.5b` for generation).
+
 ## 📁 Project Structure
 
 ```text
