@@ -4,14 +4,14 @@ from qdrant_client.models import PointStruct, Distance, VectorParams
 from pypdf import PdfReader
 import uuid
 from typing import List
-import os
 
-# constants
-CHUNK_SIZE = 1500
-CHUNK_OVERLAP = 100
-COLLECTION_NAME = "documents"
-EMBEDDING_MODEL = "nomic-embed-text"  # fast CPU embedding model
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")
+from config import (
+    CHUNK_SIZE,
+    CHUNK_OVERLAP,
+    COLLECTION_NAME,
+    EMBEDDING_MODEL,
+    OLLAMA_HOST,
+)
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:

@@ -1,10 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from qdrant_client import QdrantClient
-import os
 from models import QuestionRequest, QuestionResponse, UploadResponse
 from ingestion import ingest_document
 from retrieval import search_similar_chunks, generate_answer
+from config import qdrant_client
 
 app = FastAPI(title="RAG-powered Assistant API")
 
@@ -17,13 +16,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize Qdrant client
-qdrant_client = QdrantClient(
-    host=os.getenv("QDRANT_HOST", "qdrant"),
-    port=6333
-)
-
 
 @app.get("/health")
 async def health_check():

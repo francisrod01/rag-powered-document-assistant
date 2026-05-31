@@ -2,9 +2,8 @@ import requests
 from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from typing import List, Tuple
-from ingestion import OLLAMA_HOST, EMBEDDING_MODEL, COLLECTION_NAME
 
-CHAT_MODEL = "qwen2:1.5b"  # powerful model for answering questions
+from config import OLLAMA_HOST, EMBEDDING_MODEL, COLLECTION_NAME, CHAT_MODEL
 
 
 def get_embedding(text: str) -> List[float]:
