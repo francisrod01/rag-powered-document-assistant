@@ -221,3 +221,6 @@ __marimo__/
 
 # cache directories
 output/
+
+# Docker overrides
+docker-compose.override.yml
