@@ -3,6 +3,8 @@
 This is an interactive app where you can upload a PDF and then ask questions in natural language.  
 For example, upload a technical report and get answers instantly, with citations.
 
+![App Preview](docs/screenshots/rag_powered_project_preview.png)
+
 Author: [Francis Batista](https://github.com/francisrod01)
 
 
