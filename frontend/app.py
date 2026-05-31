@@ -38,7 +38,35 @@ with st.sidebar:
                 st.error(f"Cannot connect to backend at {API_URL}. Error: {exc}")
 
     st.divider()
-    st.caption(f"Session ID: {st.session_state.session_id[:8]}...")
+
+    st.header("Chat History")
+    if st.button("➕ New Chat", use_container_width=True):
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.messages = []
+        st.rerun()
+
+    try:
+        sess_response = requests.get(f"{API_URL}/sessions", timeout=5)
+        if sess_response.status_code == 200:
+            sessions = sess_response.json()
+            if not sessions:
+                st.caption("No past sessions found.")
+            for s in sessions:
+                sid = s['session_id']
+                date_str = s['last_active'].split('T')[0]
+                if st.button(f"Chat {sid[:6]} ({date_str})", key=f"btn_{sid}", use_container_width=True):
+                    st.session_state.session_id = sid
+                    hist_resp = requests.get(f"{API_URL}/history/{sid}", timeout=5)
+                    if hist_resp.status_code == 200:
+                        st.session_state.messages = hist_resp.json()
+                    else:
+                        st.session_state.messages = []
+                    st.rerun()
+    except Exception:
+        st.caption("Could not load history.")
+
+    st.divider()
+    st.caption(f"Current Session: {st.session_state.session_id[:8]}...")
 
 
 # Main chat interface

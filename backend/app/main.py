@@ -1,9 +1,18 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from models import QuestionRequest, QuestionResponse, UploadResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import List
+import json
+
+from database import engine, Base, get_db
+from models import QuestionRequest, QuestionResponse, UploadResponse, ChatMessage, ChatMessageResponse, SessionResponse
 from ingestion import ingest_document
 from retrieval import search_similar_chunks, generate_answer
 from config import qdrant_client
+
+# Create DB tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RAG-powered Assistant API")
 
@@ -40,7 +49,7 @@ async def upload_document(session_id: str, file: UploadFile = File(...)):
 
 
 @app.post("/ask", response_model=QuestionResponse)
-async def ask_question(request: QuestionRequest):
+async def ask_question(request: QuestionRequest, db: Session = Depends(get_db)):
     """Ask a question about uploaded documents"""
     try:
         # Search for relevant chunks
@@ -51,20 +60,63 @@ async def ask_question(request: QuestionRequest):
         )
 
         if not relevant_chunks:
-            return QuestionResponse(
-                answer="No documents found for this session. Please upload a PDF first.",
-                sources=[]
-            )
+            answer = "No documents found for this session. Please upload a PDF first."
+            sources = []
+        else:
+            # Generate answer
+            answer = generate_answer(request.question, relevant_chunks)
 
-        # Generate answer
-        answer = generate_answer(request.question, relevant_chunks)
+            import re
 
-        import re
+            # Extract source texts and clean up formatting
+            # Replaces all consecutive whitespaces/newlines with a single space
+            sources = [re.sub(r'\s+', ' ', chunk[0]).strip()[:200] + "..." for chunk in relevant_chunks]
 
-        # Extract source texts and clean up formatting
-        # Replaces all consecutive whitespaces/newlines with a single space
-        sources = [re.sub(r'\s+', ' ', chunk[0]).strip()[:200] + "..." for chunk in relevant_chunks]
+        # Save User Message to DB
+        user_msg = ChatMessage(
+            session_id=request.session_id,
+            role="user",
+            content=request.question,
+            sources=None
+        )
+        db.add(user_msg)
+
+        # Save Assistant Message to DB
+        assistant_msg = ChatMessage(
+            session_id=request.session_id,
+            role="assistant",
+            content=answer,
+            sources=json.dumps(sources) if sources else None
+        )
+        db.add(assistant_msg)
+        db.commit()
 
         return QuestionResponse(answer=answer, sources=sources)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating answer: {str(e)}")
+
+
+@app.get("/sessions", response_model=List[SessionResponse])
+async def get_sessions(db: Session = Depends(get_db)):
+    """Get all past chat sessions"""
+    # Group by session_id and get the max created_at
+    sessions = db.query(
+        ChatMessage.session_id,
+        func.max(ChatMessage.created_at).label('last_active')
+    ).group_by(ChatMessage.session_id).order_by(func.max(ChatMessage.created_at).desc()).all()
+
+    return [SessionResponse(session_id=s.session_id, last_active=s.last_active) for s in sessions]
+
+
+@app.get("/history/{session_id}", response_model=List[ChatMessageResponse])
+async def get_history(session_id: str, db: Session = Depends(get_db)):
+    """Get chat history for a given session"""
+    messages = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc()).all()
+    return [
+        ChatMessageResponse(
+            role=msg.role,
+            content=msg.content,
+            sources=msg.get_sources_list(),
+            created_at=msg.created_at
+        ) for msg in messages
+    ]

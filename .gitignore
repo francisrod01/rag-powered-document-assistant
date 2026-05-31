@@ -224,3 +224,6 @@ output/
 
 # Docker overrides
 docker-compose.override.yml
+
+# DB data
+backend/app/data/
