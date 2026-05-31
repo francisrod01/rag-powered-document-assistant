@@ -4,8 +4,9 @@ up:
 	docker-compose up -d --build
 
 pull-model:
-	@echo "Pulling nomic-embed-text into ollama container..."
+	@echo "Pulling models into ollama container..."
 	docker exec -it rag-powered-document-assistant-ollama-1 ollama pull nomic-embed-text
+	docker exec -it rag-powered-document-assistant-ollama-1 ollama pull qwen2:1.5b
 
 test:
 	curl http://localhost:8000/health

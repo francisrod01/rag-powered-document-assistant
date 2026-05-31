@@ -36,8 +36,12 @@ cd project-folder
 # Start all containers
 docker compose up  -d --build
 
-# Pull the AI model for Ollama to start
+# Pull the AI models for Ollama to use
+docker exec -it rag-powered-document-assistant-ollama-1 ollama pull nomic-embed-text
 docker exec -it rag-powered-document-assistant-ollama-1 ollama pull qwen2:1.5b
+
+# Alternatively, you can use the make command or provided scripts:
+# make pull-model
 ```
 
 Open your browser to check it out

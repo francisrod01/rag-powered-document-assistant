@@ -4,7 +4,8 @@
 set -e
 
 CONTAINER_NAME="rag-powered-document-assistant-ollama-1"
-MODEL="qwen2:1.5b"
+EMBED_MODEL="nomic-embed-text"
+CHAT_MODEL="qwen2:1.5b"
 
 echo "🔍 Checking if Ollama container '$CONTAINER_NAME' is running..."
 
@@ -14,8 +15,9 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     exit 1
 fi
 
-echo "✅ Container found. Pulling model '$MODEL'..."
-docker exec -it "$CONTAINER_NAME" ollama pull "$MODEL"
+echo "✅ Container found. Pulling models..."
+docker exec -it "$CONTAINER_NAME" ollama pull "$EMBED_MODEL"
+docker exec -it "$CONTAINER_NAME" ollama pull "$CHAT_MODEL"
 
-echo "🎉 Model '$MODEL' is ready!"
+echo "🎉 Models are ready!"
 echo "You can now use the RAG Assistant."

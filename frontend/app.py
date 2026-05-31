@@ -26,7 +26,7 @@ with st.sidebar:
                 response = requests.post(
                     f"{API_URL}/upload/{st.session_state.session_id}",
                     files=files,
-                    timeout=120
+                    timeout=600
                 )
                 if response.status_code == 200:
                     st.success(f"{response.json()['message']}")
@@ -67,7 +67,7 @@ if prompt := st.chat_input("Ask a question about your document"):
                         "question": prompt,
                         "session_id": st.session_state.session_id
                     },
-                    timeout=120
+                    timeout=600
                 )
                 if response.status_code == 200:
                     data = response.json()
