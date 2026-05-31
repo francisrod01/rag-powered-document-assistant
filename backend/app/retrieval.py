@@ -16,7 +16,7 @@ def get_embedding(text: str) -> List[float]:
     return response.json()["embeddings"][0]
 
 
-def search_similar_chunks(question: str, session_id: str, qdrant_client: QdrantClient, top_k: int = 3) -> List[Tuple[str, float]]:
+def search_similar_chunks(question: str, session_id: str, qdrant_client: QdrantClient, top_k: int = 10) -> List[Tuple[str, float]]:
     """Retrieve top_k relevant chunks for a question"""
 
     try:
@@ -54,20 +54,39 @@ def generate_answer(question: str, context_chunks: List[Tuple[str, float]]) -> s
     # Build prompt with context
     context = "\n\n---\n\n".join([chunk[0] for chunk in context_chunks])
 
-    prompt = f"""Ÿou are a helpful assistant answering questions based only on the provided context.
+    prompt = f"""You are a highly logical and precise data extraction assistant. Read the provided Context carefully and answer the Question based ABSOLUTELY ONLY on the Context.
 
 Context:
 {context}
 
 Question: {question}
 
-Answer concisely based only on the context above. If the context doesn't contain the answer,
-say "I cannot find this information in the document."
+Follow these strict rules:
+1. NO HALLUCINATION: Do not invent, guess, or pull in outside knowledge. If the answer is not explicitly in the Context, say: "I cannot find this information in the document."
+2. STRICT CONSTRAINTS: If the Question asks for information matching a specific condition (e.g., a certain block of time, a specific technology, or a particular concept), strictly rely on the context to filter and exclude anything that does not match.
+3. CLEAR FORMATTING: Group your findings logically. If the Question asks for distinct categories (like courses, patterns, rules, or features), use an ALL CAPS markdown header for each category (e.g., ### PATTERNS).
+4. CONCISE LISTS: Use bullet points ("- ") for lists or itemized data. Keep items concise and format them clearly (e.g., "- Concept: Explanation").
+5. ENDING: Always end your response exactly with this sentence: "This completes the requested information."
+
+Expected Output Format Example (if categorizing):
+### CATEGORY NAME
+- Item 1: Brief description based strictly on context.
+- Item 2: Brief description.
+
+This completes the requested information.
 """
 
     response = requests.post(
         f"{OLLAMA_HOST}/api/generate",
-        json={"model": CHAT_MODEL, "prompt": prompt, "max_tokens": 500, "stream": False}
+        json={
+            "model": CHAT_MODEL, 
+            "prompt": prompt, 
+            "stream": False,
+            "options": {
+                "temperature": 0.0,
+                "top_p": 0.1
+            }
+        }
     )
     response.raise_for_status()
     return response.json()["response"].strip()
