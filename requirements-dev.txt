@@ -1,0 +1,8 @@
+# Local development dependencies
+-r backend/requirements.txt
+-r frontend/requirements.txt
+
+# Testing
+pytest==8.0.0
+httpx
+pytest-asyncio==0.23.4
