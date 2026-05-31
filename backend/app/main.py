@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 import json
+import hashlib
 
 from database import engine, Base, get_db
-from models import QuestionRequest, QuestionResponse, UploadResponse, ChatMessage, ChatMessageResponse, SessionResponse
+from models import QuestionRequest, QuestionResponse, UploadResponse, ChatMessage, ChatMessageResponse, SessionResponse, DocumentHash
 from ingestion import ingest_document
 from retrieval import search_similar_chunks, generate_answer
 from config import qdrant_client
@@ -31,14 +32,35 @@ async def health_check():
     return {"status": "healthy"}
 
 @app.post("/upload/{session_id}", response_model=UploadResponse)
-async def upload_document(session_id: str, file: UploadFile = File(...)):
+async def upload_document(session_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload and ingest a PDF document"""
     if not file.filename or not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="File must be a PDF with a valid filename")
 
     try:
         contents = await file.read()
+        
+        # Check if file has already been ingested using SHA-256 hash
+        file_hash = hashlib.sha256(contents).hexdigest()
+        existing_doc = db.query(DocumentHash).filter(
+            DocumentHash.session_id == session_id,
+            DocumentHash.file_hash == file_hash
+        ).first()
+
+        if existing_doc is not None:
+            return UploadResponse(
+                message="It seems that this file was previously uploaded",
+                chunk_count=0,
+                session_id=session_id
+            )
+
+        # Process and ingest
         chunk_count = ingest_document(contents, session_id, qdrant_client)
+        
+        # Save to database to prevent re-ingestion
+        db.add(DocumentHash(session_id=session_id, file_hash=file_hash, filename=file.filename))
+        db.commit()
+
         return UploadResponse(
             message=f"Successfully ingested {file.filename}",
             chunk_count=chunk_count,

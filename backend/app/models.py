@@ -22,6 +22,14 @@ class ChatMessage(Base):
             return json.loads(val)
         return []
 
+class DocumentHash(Base):
+    __tablename__ = "document_hashes"
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    session_id: Mapped[str] = mapped_column(String, index=True)
+    file_hash: Mapped[str] = mapped_column(String, index=True)
+    filename: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))
+
 # Pydantic Models for API
 class QuestionRequest(BaseModel):
     question: str
