@@ -10,8 +10,11 @@ from config import (
     CHUNK_OVERLAP,
     COLLECTION_NAME,
     EMBEDDING_MODEL,
+    EMBEDDING_BATCH_SIZE,
     OLLAMA_HOST,
+    OLLAMA_TIMEOUT_SECONDS,
 )
+from ollama_client import get_embeddings
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -44,14 +47,14 @@ def chunk_text(text: str) -> List[str]:
 
 
 def get_embeddings_batch(texts: List[str]) -> List[List[float]]:
-    """Get embeddings for a list of texts in a single API call"""
-    import requests
-    response = requests.post(
-        f"{OLLAMA_HOST}/api/embed",
-        json={"model": EMBEDDING_MODEL, "input": texts}
+    """Get embeddings for a list of texts across Ollama API versions."""
+    return get_embeddings(
+        OLLAMA_HOST,
+        EMBEDDING_MODEL,
+        texts,
+        timeout=OLLAMA_TIMEOUT_SECONDS,
+        batch_size=EMBEDDING_BATCH_SIZE,
     )
-    response.raise_for_status()
-    return response.json()["embeddings"]
 
 
 def ingest_document(file_bytes: bytes, session_id: str, qdrant_client: QdrantClient):
