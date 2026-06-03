@@ -3,6 +3,11 @@
 This is an interactive app where you can upload a PDF and then ask questions in natural language.  
 For example, upload a technical report and get answers instantly, with citations.
 
+### ✨ Features
+- **Local LLM RAG Pipeline**: Fully private workflow without external API dependencies.
+- **Real-Time Text Streaming**: Answers stream seamlessly chunk-by-chunk just like ChatGPT for a highly responsive UX.
+- **Session Chat History**: Contextual message history is saved within SQLite to keep track of your sessions.
+
 ![App Preview](docs/screenshots/rag_powered_project_preview.png)
 
 Author: [Francis Batista](https://github.com/francisrod01)
@@ -11,9 +16,9 @@ Author: [Francis Batista](https://github.com/francisrod01)
 ## 🏗 Architecture
 
 This assistant uses a Retrieval-Augmented Generation (RAG) architecture:
-1. **Frontend**: Streamlit provides a simple UI to upload PDFs and ask questions.
-2. **Backend**: A FastAPI server coordinates ingestion and retrieval.
-3. **Storage**: Qdrant Vector Database stores document embeddings.
+1. **Frontend**: Streamlit provides a simple UI to upload PDFs and natively handles real-time response streaming.
+2. **Backend**: A FastAPI server coordinates ingestion, retrieval, and serves responses incrementally via an NDJSON streaming endpoint (`/ask_stream`).
+3. **Storage**: Qdrant Vector Database stores document embeddings, and local SQLite tracks user chat histories.
 4. **LLM Engine**: Ollama runs models locally (`nomic-embed-text` for embeddings, `qwen2:1.5b` for generation).
 
 ## 📁 Project Structure
@@ -61,12 +66,21 @@ Open your browser to check it out
 
 ## ✅ Test It
 
+### Using the Web UI
 * Upload a PDF (any report, article, or book chapter)
 * Wait for "Processing" to complete
 * Ask questions like:
   - "What is the main topic of this document?"
   - "Summarise the key points"
   - "What does the document say about [specific term]"
+* Watch the answer output stream progressively chunk-by-chunk on the screen.
+
+### Testing the Delivery Stream via Terminal
+If you want to view how the NDJSON response delivers chunks incrementally, you can execute our Python test script:
+```bash
+# From the project root, run the streaming tester
+python backend/tests/test_stream_api.py
+```
 
 
 ## 🔧 Troubleshooting
