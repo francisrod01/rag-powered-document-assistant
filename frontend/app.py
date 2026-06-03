@@ -12,8 +12,6 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "upload_feedback" not in st.session_state:
-    st.session_state.upload_feedback = None
 
 st.set_page_config(page_title="RAG-powered Document Assistant", layout="wide")
 st.title("RAG-powered Document Assistant")
@@ -50,12 +48,6 @@ def iter_stream_events(response: requests.Response) -> Iterator[Dict[str, Any]]:
 with st.sidebar:
     st.header("Upload Document")
 
-    upload_feedback = st.session_state.upload_feedback
-    if isinstance(upload_feedback, dict):
-        st.success(upload_feedback["message"])
-        st.info(f"Chunks created: {upload_feedback['chunk_count']}")
-        st.session_state.upload_feedback = None
-
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
     if uploaded_file and st.button("Process Document"):
@@ -72,11 +64,8 @@ with st.sidebar:
                     payload = response.json()
                     st.session_state.session_id = upload_session_id
                     st.session_state.messages = []
-                    st.session_state.upload_feedback = {
-                        "message": payload["message"],
-                        "chunk_count": payload["chunk_count"],
-                    }
-                    st.rerun()
+                    st.success(payload["message"])
+                    st.info(f"Chunks created: {payload['chunk_count']}")
                 else:
                     detail = response.json().get("detail", "Unknown backend error")
                     st.error(f"Error: {detail}")
